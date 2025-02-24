@@ -1,0 +1,221 @@
+/*By Zimmal Adnan (2025)
+
+LIBRARIES FROM:
+1. Rowberg, J., Sebok, M. (2011) MPU6050.h. Available at: https://github.com/jrowberg/i2cdevlib/blob/master/dsPIC30F/MPU6050/MPU6050.h
+2. Rowberg, J., Sebok, M. (Updated: 2014) I2Cdev.h. Available at: https://github.com/jrowberg/i2cdevlib/blob/master/dsPIC30F/I2Cdev/I2Cdev.h
+3. LiquidCrystal_I2C.h by Frank de Brabander
+4. LCD code: Prasetyo J. (2022) Serial_to_LCD.ino. Available at: https://github.com/judhi/i2c/blob/main/Serial_to_LCD.ino
+*/
+
+#include <Wire.h>
+#include <I2Cdev.h>
+#include <Servo.h> 
+#include <MPU6050.h>
+#include <LiquidCrystal_I2C.h>
+
+#define NUM_SAMPLES 20  //averages multiple sensor readings for stability
+#define DEADZONE 5 //prevents sensor noise and reading unintentional gyroscope movements 
+
+MPU6050 mpu; 
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
+Servo servoOpen, servoClose;
+
+int left_led_pin = 5;
+int right_led_pin = 6;
+int brightness = 0;
+
+int fan_pin = 7;  
+float lift_threshold = 1.1;  
+float drop_threshold = 0.8; 
+bool curtain = false;
+
+int16_t ax, ay, az, gx, gy, gz;
+int16_t ax_offset, ay_offset, az_offset;
+int16_t gx_offset, gy_offset, gz_offset;
+
+void setup()
+{
+  lcd.init(); 
+  lcd.backlight(); 
+  lcd.clear(); 
+  lcd.setCursor(0, 0);
+  lcd.print("Calibrating...");
+  lcd.setCursor(0, 1);
+  lcd.print("Keep hand still!");
+
+  Serial.begin(115200);
+  Wire.begin(); 
+  mpu.initialize();
+
+  pinMode(left_led_pin, OUTPUT);
+  pinMode(right_led_pin, OUTPUT);
+  pinMode(fan_pin, OUTPUT);
+
+  servoOpen.attach(9);  
+  servoClose.attach(12); 
+  
+  Serial.println("Calibrating MPU6050... Keep the sensor still!");
+  mpu.CalibrateAccel(30);
+  mpu.CalibrateGyro(30);
+  Serial.println("Calibration Complete!");
+
+//calibration values to remove baseline noises
+  ax_offset = mpu.getXAccelOffset();
+  ay_offset = mpu.getYAccelOffset();
+  az_offset = mpu.getZAccelOffset();
+  gx_offset = mpu.getXGyroOffset();
+  gy_offset = mpu.getYGyroOffset();
+  gz_offset = mpu.getZGyroOffset();
+
+//correct raw sensor readings
+  Serial.println("Applying Offsets...");
+  mpu.setXAccelOffset(ax_offset);
+  mpu.setYAccelOffset(ay_offset);
+  mpu.setZAccelOffset(az_offset);
+  mpu.setXGyroOffset(gx_offset);
+  mpu.setYGyroOffset(gy_offset);
+  mpu.setZGyroOffset(gz_offset);
+
+  Serial.println("Offsets Applied! Now printing corrected sensor values.");
+  lcd.clear();
+}
+void loop()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Ready for");
+  lcd.setCursor(0, 1);
+  lcd.print("gestures!");
+   
+  int32_t axSum = 0, aySum = 0, azSum = 0, gxSum = 0, gySum = 0, gzSum = 0;
+  int16_t axAvg, ayAvg, azAvg, gxAvg, gyAvg, gzAvg;
+
+//to collect and average data readings
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    
+    axSum += ax;
+    aySum += ay;
+    azSum += az;
+    gxSum += gx;
+    gySum += gy;
+    gzSum += gz;
+    delay(10);
+  }
+
+  axAvg = axSum / NUM_SAMPLES;
+  ayAvg = aySum / NUM_SAMPLES;
+  azAvg = azSum / NUM_SAMPLES;
+  gxAvg = gxSum / NUM_SAMPLES;
+  gyAvg = gySum / NUM_SAMPLES;
+  gzAvg = gzSum / NUM_SAMPLES;
+
+//raw acceleration values are in LSB units (Least Significant Bits).
+//16384 LSB corresponds to 1g (acceleration due to gravity) to represent actual acceleration.
+  float accelX = axAvg / 16384.0; 
+  float accelY = ayAvg / 16384.0;
+  float accelZ = azAvg / 16384.0;
+
+//raw gyrosocope values are in LSB units.
+//131 LSB is equal to 1 degree per second.
+//converts raw values to angular velocity in degrees per second.
+  float gyroX = gxAvg / 131.0;
+  float gyroY = gyAvg / 131.0;
+  float gyroZ = gzAvg / 131.0; 
+
+//to prevent sensor noise
+  if (abs(gxAvg) < DEADZONE) gxAvg = 0;
+  if (abs(gyAvg) < DEADZONE) gyAvg = 0;
+  if (abs(gzAvg) < DEADZONE) gzAvg = 0;
+
+  Serial.print("Accel X: "); Serial.print(accelX);
+  Serial.print(" Accel Y: "); Serial.print(accelY);
+  Serial.print(" Accel Z: "); Serial.println(accelZ);
+
+  Serial.print("Gyro X: "); Serial.print(gyroX);
+  Serial.print(" Gyro Y: "); Serial.print(gyroY);
+  Serial.print(" Gyro Z: "); Serial.println(gyroZ);
+
+  delay(500);
+
+//------------CURTAIN-------------
+  if(gyroX < -30  && !curtain){
+    Serial.println("Left Swipe (Open Curtain)");
+    servoOpen.write(180);
+    servoClose.write(0); 
+    curtain = true;
+    lcd.clear();
+    lcd.print("Curtain Open");
+    delay(1000);
+  }
+
+  else if (gyroX > 30 && curtain){
+    Serial.println("Right Swipe (Close Curtain)");
+    servoOpen.write(0);
+    servoClose.write(180); 
+    curtain = false;
+    lcd.clear();
+    lcd.print("Curtain Close");
+    delay(1000);
+  }
+
+
+//-----------FAN------------
+  if (accelZ > lift_threshold) {  
+    Serial.println("Hand lifted: Fan ON");
+    digitalWrite(fan_pin, HIGH);  
+    lcd.clear();
+    lcd.print("Fan on");
+    delay(2000);  
+  }
+
+  if (accelZ < drop_threshold) {  
+    Serial.println("Hand dropped: Fan OFF");
+    digitalWrite(fan_pin, LOW);
+  }
+
+//------------LEDS-------------
+  if (accelX < -0.1 && abs(accelZ) < 0.2) {
+        Serial.println("Tilt Left: Left LED ON");
+        analogWrite(left_led_pin, HIGH);
+        analogWrite(right_led_pin, LOW);
+        lcd.clear();
+        lcd.print("Left LED on");
+        delay(1000);
+    }
+  
+    else if (accelX > 0.1 && abs(accelZ) < 0.2) {
+        Serial.println("Tilt Right: Right LED ON");
+        analogWrite(left_led_pin, LOW);
+        analogWrite(right_led_pin, HIGH);
+        lcd.clear();
+        lcd.print("Right LED on");
+        delay(1000);
+    }
+   
+    if (accelY > 0.6) {
+        brightness = min(brightness + 100, 255);
+        analogWrite(left_led_pin, brightness);
+        analogWrite(right_led_pin, brightness);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Increasing LED");
+        lcd.setCursor(0, 1);
+        lcd.print("Brightness");
+        delay(1000);
+    }
+    
+    else if (accelY < -0.6) {
+        brightness = max(brightness - 100, 0); 
+        analogWrite(left_led_pin, brightness);
+        analogWrite(right_led_pin, brightness);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Decreasing LED");
+        lcd.setCursor(0, 1);
+        lcd.print("Brightness");
+        delay(1000);
+    }
+delay(200);
+}
+

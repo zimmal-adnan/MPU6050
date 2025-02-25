@@ -5,6 +5,7 @@ LIBRARIES FROM:
 2. Rowberg, J., Sebok, M. (Updated: 2014) I2Cdev.h. Available at: https://github.com/jrowberg/i2cdevlib/blob/master/dsPIC30F/I2Cdev/I2Cdev.h
 3. LiquidCrystal_I2C.h by Frank de Brabander
 4. LCD code: Prasetyo J. (2022) Serial_to_LCD.ino. Available at: https://github.com/judhi/i2c/blob/main/Serial_to_LCD.ino
+5. MPU6050 calibration idea: Ródenas, L., Shakeel (Updated: 2019) MPU6050_offset_calibration_UPDATED.ino. Available at: https://github.com/blinkmaker/Improved-MPU6050-calibration/blob/master/MPU6050_offset_calibration_UPDATED.ino
 */
 
 #include <Wire.h>

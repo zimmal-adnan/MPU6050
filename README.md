@@ -28,7 +28,11 @@ In working.
 
 ## Installation
 1. Clone the repository
-2. 
+2. Upload the code to Arduino
+3. In your Arduino IDE, go to Library Manager and download:
+   * LiquidCrystal I2C by Frank de Brabander
+4. Clone and upload all the repositories provided in the code
+5. Connect hardware
 
 ## Calibration Guide
 Before testing:

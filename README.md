@@ -2,7 +2,7 @@
 
 ## A code written in the Arduino IDE using C++ for an MPU6050 sensor that controls LEDs, servo motors and a fan
 
-Controlling lights, fan, servos and any other component as you like using hand gestures with this code. This project uses an MPU6050 sensor with an in-built accelerometer and gyroscope to detect gestures based on specific values of the accelerometer and/or gyroscope.
+Control lights, fans, servos, and more with hand gestures! This Arduino-based project uses the MPU6050 sensor (with built-in accelerometer and gyroscope) to detect motions like swipes, tilts, and lifts. It is beginner-friendly and perfect for DIY smart home systems, IoT prototypes, or accessibility tech. Unlike voice control, the system can work silently. The code translates sensor data into real-world actions such as, adjusting LEDs, servo-controlled curtains or the fan.
 
 ## Features
 * Gesture Recognition – Swipe, tilt, and lift detection
@@ -12,7 +12,8 @@ Controlling lights, fan, servos and any other component as you like using hand g
 * Calibration – Automatic sensor calibration
 
 ## Tinkercad Diagram for Wiring Assistance
-<img src = "" alt = "Wiring Diagram for a Gesture-controlled Room"
+In working.
+
 ## Hardware Components
 * Arduino Uno
 * MPU6050 (Accelerometer + Gyroscope)
@@ -20,8 +21,21 @@ Controlling lights, fan, servos and any other component as you like using hand g
 * 16x2 I2C LCD
 * LEDs (x2)
 * DC Fan
+* Relay Module
+* Power Supplies (x2)
+* 9V batteries (x2)
 * Resistors & Jumper Wires
 
 ## Installation
 1. Clone the repository
 2. 
+
+## Calibration Guide
+Before testing:
+* Keep the MPU6050 sensor steady on a flat surface
+* Wait a few seconds while the LCD displays "Calibrating... Keep hand still!"
+* Do not move until the screen shows "Ready for gestures!"
+
+NOTE: Automatic calibration is still under working. For best results:
+* Connect the MPU6050 to the system using a HC-05 Bluetooth module instead of wires.
+* Recalibrate if the device is moved to a new location.
